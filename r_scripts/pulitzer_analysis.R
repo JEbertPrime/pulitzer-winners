@@ -33,23 +33,23 @@ summary_data <- aggregate(summary_data[2:4], list(summary_data$data.headline), F
 summary_data <- summary_data %>%
   mutate(fk_ease = 206.835 - 1.105*(data.words/data.sentences) - 84.6*(data.syllables/data.words),fk_grade = 0.39*(data.words/data.sentences) + 11.8*(data.syllables/data.words) - 15.59) 
 ggplot(data, aes(x=reorder(headline, date), y=fk_grade, fill=headline), color=NA) +
-  geom_boxplot(color="#909090") +
+  theme_wsj() +
+  geom_violin(color=NA) +
   ylab("Reading Level") +
   xlab("") +
   ggtitle("Pulitzer Winning Feature Reading Grades", subtitle="Winners from 2007-2017") +
   coord_flip() +
-  scale_y_continuous(limits=c(-5,20), breaks = c(0,5,10,15,20)) +
-  theme_minimal(base_size=25, base_family="Garamond") +
+  scale_y_continuous(limits=c(0,20), breaks = c(0,5,10,15,20)) +
   theme(axis.title.x=element_blank(),
         legend.position="none",
         axis.ticks.x=element_blank(),
         legend.text = element_text(color="#909090", size = 10))
-ggsave("box_plot.png",width=18, height=7, units = "in", dpi = 300)
+ggsave("box_plot.png",width=18, height=10, units = "in", dpi = 500, scale = 2)
 ggplot(data, aes(x=graf_id, y=fk_grade, color=headline)) +
   geom_point(aes(color=headline, fill=headline), alpha=.8) +
   ylab("Reading Level") +
   xlab("") +
-  theme_minimal() +
+  theme_wsj() +
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
         axis.ticks.x=element_blank()) 
