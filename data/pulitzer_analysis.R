@@ -17,7 +17,7 @@ library(ggthemes)
 data <- read_csv("feature_winners_2007_2017.csv")
 #Necessary to avoid encoding errors when converting to lowercase
 data$graf <- sapply(data$graf,function(row) iconv(row, "latin1", "ASCII", sub=""))
-full_articles <- aggregate(graf ~ headline + date, data=data, paste, sep=",") 
+full_articles <- aggregate(graf ~ headline + date, data=data, paste) 
 article_text<- data.frame(graf = unlist(full_articles$graf))
 write.table(full_articles, "full_articles.txt")
 #lowercase is needed for nsyllable, which bugs out when encountering ALL CAPS
@@ -102,7 +102,7 @@ ggplot(positive_freqs, aes(x=date, y=percent, color=author, size=5)) +
         panel.grid.minor = element_blank())
 # break text into bigrams
 bigrams <- data %>% 
-  unnest_tokens(bigram, graf, token = "ngrams", n = 2) %>%
+  unnest_tokens(bigram,graf, token = "ngrams", n = 2) %>%
   separate(bigram, into = c("first","second"), sep = " ", remove = FALSE) %>%
   # remove stop words from tidytext package 
   anti_join(stop_words, by = c("first" = "word")) %>%
@@ -115,7 +115,7 @@ bigrams <- data %>%
 
 bigram_freqs <- bigrams %>% 
   left_join(bigrams %>% 
-              group_by(headline,author,date,year,words) %>% 
+              group_by(headline,author,date) %>% 
               summarise(total = sum(n))) %>%
   mutate(percent = n/total*100) %>%
   group_by(headline,author,date)
@@ -130,7 +130,7 @@ top_bigram_freqs <- bigram_freqs %>%
   ungroup() %>%
   arrange(-percent) %>%
   mutate(year = year(date),
-         address = paste0(president,", ",year))
+         address = paste0(headline,", ",year))
 
 # some cleaning for display in chart
 top_bigram_freqs$address <- gsub("William J.","Bill", top_bigram_freqs$address)
@@ -139,13 +139,50 @@ top_bigram_freqs$address <- gsub("William J.","Bill", top_bigram_freqs$address)
 bigram_pal <- c("#1482EE","#228B22","#686868","#FF3300","#EEC900")
 
 # chart
-ggplot(top_bigram_freqs[1:12,], aes(x=reorder(address,percent), y=percent, fill=party, label=bigram)) +
+ggplot(top_bigram_freqs[1:12,], aes(x=reorder(address,percent), y=percent, label=bigram)) +
   geom_bar(stat = "identity", alpha = 0.7) +
   geom_text(aes(y = 1.5), color = "#FFFFFF", size = 7) +
-  scale_fill_manual(values = bigram_pal, guide = FALSE) +
   theme_minimal(base_size = 24, base_family = "ProximaNova-Semibold") +
   theme(panel.grid.major.y = element_blank(),
         panel.grid.minor.y = element_blank()) +
   xlab("") +
   ylab("% of word pairs used") +
   coord_flip()
+
+##############################################################################################
+
+data <- data %>%
+  arrange(date)
+
+# empty data frames 
+first_words = data_frame()
+old_words <- data_frame()
+
+# loop through each address, comparing to predecessors to select new words
+n <- 1
+for (l in full_articles$headline) {
+  previous <- data[n-1,]
+  previous_words <- previous %>%
+    unnest_tokens(word, graf) %>%
+    filter(str_detect(word, "[a-z]")) %>%
+    anti_join(stop_words) %>%
+    unique()
+  old_words <- bind_rows(old_words, previous_words)
+  tmp <- data %>%
+    filter(headline == l)
+  tmp_words <- tmp %>%
+    unnest_tokens(word, graf) %>%
+    filter(str_detect(word, "[a-z]")) %>%
+    anti_join(stop_words) %>%
+    unique()
+  new_words = base::setdiff(tmp_words$word, old_words$word)
+  tmp_df <- data_frame(headline = l, word = new_words)
+  first_words <- bind_rows(first_words,tmp_df)
+  n <- n+1
+}
+
+first_words <- inner_join(data,first_words) %>%
+  select(headline,author,date,word) %>%
+  arrange(desc(date))
+
+datatable(first_words)
