@@ -12,9 +12,53 @@ library(quanteda)
 library(ggplot2)
 library(DT)
 library(ggthemes)
+library(tm)
+library(SnowballC)
+library(wordcloud)
+library(RColorBrewer)
 
 #ingest data
 data <- read_csv("feature_winners_2007_2017.csv")
+
+#write articles to text files
+for (headline in unique(data$headline)){
+datafiltered <- data[data$headline == headline,]
+write.table(datafiltered$graf, file= paste("txt-files/",headline,".txt", sep=""), sep = "\t",
+            row.names = FALSE)}
+#build word clouds from articles
+files <- list.files(path="txt-files", pattern=".txt", full.names=T, recursive=FALSE)
+for(file in files){
+  text <- readLines(file)
+  docs <- Corpus(VectorSource(text))
+  toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
+  docs <- tm_map(docs, toSpace, "/")
+  docs <- tm_map(docs, toSpace, "@")
+  docs <- tm_map(docs, toSpace, "\\|")
+  docs <- tm_map(docs, toSpace, "said")
+  docs <- tm_map(docs, toSpace, "says")
+  # Convert the text to lower case
+  docs <- tm_map(docs, content_transformer(tolower))
+  # Remove numbers
+  docs <- tm_map(docs, removeNumbers)
+  # Remove english common stopwords
+  docs <- tm_map(docs, removeWords, stopwords("english"))
+  # Remove your own stop word
+  # specify your stopwords as a character vector
+  docs <- tm_map(docs, removeWords, c("blabla1", "blabla2")) 
+  # Remove punctuations
+  docs <- tm_map(docs, removePunctuation)
+  # Eliminate extra white spaces
+  docs <- tm_map(docs, stripWhitespace)
+  dtm <- TermDocumentMatrix(docs)
+  m <- as.matrix(dtm)
+  v <- sort(rowSums(m),decreasing=TRUE)
+  d <- data.frame(word = names(v),freq=v)
+  set.seed(1234)
+  wordcloud(words = d$word, freq = d$freq, min.freq = 2,
+            max.words=200, random.order=FALSE, rot.per=0.35, 
+            colors=brewer.pal(8, "Dark2"))
+  
+}
 #Necessary to avoid encoding errors when converting to lowercase
 data$graf <- sapply(data$graf,function(row) iconv(row, "latin1", "ASCII", sub=""))
 full_articles <- aggregate(graf ~ headline + date, data=data, paste) 
@@ -160,7 +204,7 @@ old_words <- data_frame()
 
 # loop through each address, comparing to predecessors to select new words
 n <- 1
-for (l in full_articles$headline) {
+for (l in data$headline) {
   previous <- data[n-1,]
   previous_words <- previous %>%
     unnest_tokens(word, graf) %>%

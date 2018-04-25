@@ -1,2 +1,0 @@
-"headline" "date" "graf"
-"1" "The Stalking of Kristin" 1992-11-22 
