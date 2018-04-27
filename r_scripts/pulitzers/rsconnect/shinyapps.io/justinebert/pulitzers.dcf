@@ -1,0 +1,12 @@
+name: pulitzers
+title:
+username:
+account: justinebert
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 331928
+bundleId: 1343193
+url: https://justinebert.shinyapps.io/pulitzers/
+when: 1524836826.21257
+asMultiple: FALSE
+asStatic: FALSE
